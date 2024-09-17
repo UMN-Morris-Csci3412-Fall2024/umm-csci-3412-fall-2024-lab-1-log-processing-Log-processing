@@ -1,18 +1,22 @@
 #!/bin/bash
 
+# Check if a directory argument is provided
 if [ -z "$1" ]; then
   echo "Usage: $0 <directory>"
   exit 1
 fi
 
+# Set the target directory and check if it is a directory
 TARGET_DIR="$1"
 if [ ! -d "$TARGET_DIR" ]; then
   echo "$TARGET_DIR is not a directory"
   exit 1
 fi
 
+# Create a temporary directory for extraction
 TEMP_DIR=$(mktemp -d)
 
+# Extract all .tgz files into the temporary directory
 for file in "$TARGET_DIR"/*.tgz; do
   if [ -f "$file" ]; then
     echo "Extracting $file..."
@@ -22,10 +26,10 @@ for file in "$TARGET_DIR"/*.tgz; do
   fi
 done
 
-
+# Change to the temporary directory
 cd "$TEMP_DIR" || { echo "Failed to change to temporary directory"; exit 1; }
 
-
+# Process log files
 find . -type f -exec cat {} + | awk '
   /Failed password for invalid user/ {
     split($0, a, " ")
@@ -45,6 +49,7 @@ find . -type f -exec cat {} + | awk '
   }
 ' > failed_login_data
 
+# Clean up temporary directory
 rm -rf "$TEMP_DIR"
 
 echo "Processing complete. Results saved to failed_login_data"

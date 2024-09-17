@@ -10,7 +10,6 @@ input_file=$1
 header_footer_name=$2
 output_file=$3
 
-
 header_file="html_components/${header_footer_name}_header.html"
 footer_file="html_components/${header_footer_name}_footer.html"
 

@@ -19,4 +19,4 @@ find . -type f -exec cat {} + | awk '
     split($0, a, " ")
     print a[1], a[2], substr(a[3], 1, 2), a[9], a[11]
   }
-' > fa
+' > failed_login_data.txt

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <input_file> <header_footer_name> <output_file>"
     exit 1

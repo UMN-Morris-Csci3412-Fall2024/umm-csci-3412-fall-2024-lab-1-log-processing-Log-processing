@@ -5,45 +5,53 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-input_dir="$1"
+target="$1"
+output="country_dist.html"
+header="../html_components/country_dist_header.html"
+footer="../html_components/country_dist_footer.html"
+country_ip_map="../etc/country_IP_map.txt"
 
-temp_file=$(mktemp)
+if ! cd "$target"; then
+  echo "Error: Unable to access directory $target"
+  exit 1
+fi
 
-for dir in "$input_dir"/*/; do
-  if [ -f "$dir/failed_login_data.txt" ]; then
-    awk '{print $5}' "$dir/failed_login_data.txt" >> "$temp_file"
+if [ ! -f "$country_ip_map" ]; then
+  echo "Error: Country IP map not found: $country_ip_map"
+  exit 1
+fi
+
+if [ -f "$header" ]; then
+  cat "$header" > "$output"
+else
+  echo "Header file missing: $header"
+  exit 1
+fi
+
+temp=$(mktemp)
+
+for sub_dir in */; do
+  login_file="${sub_dir%/}/failed_login_data.txt"  
+  if [ -f "$login_file" ]; then
+    awk '{print $5}' "$login_file" >> "$temp"
   fi
 done
 
-if [ ! -s "$temp_file" ]; then
-  echo "No IP addresses found in failed_login_data.txt files." >> debug_output.txt
-  rm "$temp_file"
+
+mapped=$(mktemp)
+sort "$temp" | join -1 1 -2 1 -o 2.2 - "$country_ip_map" > "$mapped"
+
+sort "$mapped" | uniq -c | while read -r count country; do
+  printf "data.addRow([\x27%s\x27, %d]);\n" "$country" "$count" >> "$output"
+done
+
+if [ -f "$footer" ]; then
+  cat "$footer" >> "$output"
+else
+  echo "Footer file missing: $footer"
+  rm -f "$temp" "$mapped"
   exit 1
 fi
 
-sorted_temp_file=$(mktemp)
-sort "$temp_file" > "$sorted_temp_file"
-
-joined_temp_file=$(mktemp)
-join -1 1 -2 1 "$sorted_temp_file" <(sort etc/country_IP_map.txt) > "$joined_temp_file"
-
-country_temp_file=$(mktemp)
-awk '{print $2}' "$joined_temp_file" | sort | uniq -c > "$country_temp_file"
-
-awk '{print "data.addRow([\x27" $2 "\x27, " $1 "]);"}' "$country_temp_file" > "$temp_file"
-
-if [ ! -s "$temp_file" ]; then
-  echo "No data rows generated." >> debug_output.txt
-  rm "$temp_file" "$sorted_temp_file" "$joined_temp_file" "$country_temp_file"
-  exit 1
-fi
-
-./bin/wrap_contents.sh "$temp_file" "country_dist" "$input_dir/country_dist.html"
-
-if [ ! -f "$input_dir/country_dist.html" ]; then
-  echo "Failed to create country_dist.html." >> debug_output.txt
-  rm "$temp_file" "$sorted_temp_file" "$joined_temp_file" "$country_temp_file"
-  exit 1
-fi
-
-rm "$temp_file" "$sorted_temp_file" "$joined_temp_file" "$country_temp_file"
+rm -f "$temp" "$mapped"
+echo "Country distribution chart created: $output"

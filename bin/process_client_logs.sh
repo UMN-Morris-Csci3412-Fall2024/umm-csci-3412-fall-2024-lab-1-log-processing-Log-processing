@@ -18,6 +18,7 @@ fi
 # Define the output directory and file.
 output_dir="data/discovery"
 output_file="$output_dir/failed_login_data.txt"
+temp_dir=$(mktemp -d)
 
 # Create the output directory if it doesn't exist.
 mkdir -p "$output_dir"
@@ -25,14 +26,14 @@ mkdir -p "$output_dir"
 # Empty the output file if it already exists.
 > "$output_file"
 
-# Extract .tgz files if any
+# Extract .tgz files into a temporary directory
 find "$log_dir" -type f -name "*.tgz" | while read -r tgz_file; do
   echo "Extracting file: $tgz_file"  # Debugging statement
-  tar -xzf "$tgz_file" -C "$log_dir"
+  tar -xzf "$tgz_file" -C "$temp_dir"
 done
 
-# Process each log file within the directory.
-find "$log_dir" -type f -name "secure*" | while read -r log_file; do
+# Process each log file within the temporary directory.
+find "$temp_dir" -type f -name "secure*" | while read -r log_file; do
   echo "Processing file: $log_file"  # Debugging statement
   # Extract failed login attempts using grep.
   grep "Failed password for" "$log_file" | \
@@ -43,6 +44,9 @@ find "$log_dir" -type f -name "secure*" | while read -r log_file; do
     echo "No failed login attempts found in $log_file"  # Debugging statement
   fi
 done
+
+# Clean up the temporary directory
+rm -rf "$temp_dir"
 
 # Check if the output file is still empty
 if [ ! -s "$output_file" ]; then
